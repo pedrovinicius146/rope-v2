@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - RO-PE</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="auth-page">
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1 class="auth-logo">🏙️ RO-PE</h1>
+                <p class="auth-subtitle">Registros e Ocorrências Pernambuco</p>
+            </div>
+
+            <form id="loginForm" class="auth-form">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" class="form-control" placeholder="seu@email.com" required autofocus>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Senha</label>
+                    <input type="password" id="password" class="form-control" placeholder="••••••••" required minlength="6">
+                </div>
+
+                <div id="errorMessage" class="alert alert-error" style="display: none;"></div>
+
+                <button type="submit" class="btn btn-primary btn-block">
+                    Entrar
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                <p>Não tem uma conta? <a href="register.html">Cadastre-se aqui</a></p>
+            </div>
+        </div>
+
+        <div class="auth-info">
+            <h2>Bem-vindo ao RO-PE</h2>
+            <p>Plataforma de registro de ocorrências urbanas em tempo real para Pernambuco.</p>
+            <ul>
+                <li>✅ Registre ocorrências com foto e localização</li>
+                <li>✅ Visualize em tempo real no mapa</li>
+                <li>✅ Contribua para uma cidade mais segura</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script>
+        const loginForm = document.getElementById('loginForm');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // Verificar se já está logado
+        if (Auth.isAuthenticated()) {
+            window.location.href = 'index.html';
+        }
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorMessage.style.display = 'none';
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            const btn = loginForm.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.textContent = 'Entrando...';
+
+            try {
+                await Auth.login(email, password);
+                window.location.href = 'index.html';
+            } catch (error) {
+                errorMessage.textContent = error.message || 'Erro ao fazer login. Verifique suas credenciais.';
+                errorMessage.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Entrar';
+            }
+        });
+    </script>
+</body>
+</html>

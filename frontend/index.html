@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RO-PE - Registros e Ocorrências Pernambuco</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="container">
+                <div class="header-content">
+                    <h1 class="logo">🏙️ RO-PE</h1>
+                    <nav class="nav">
+                        <span id="userName" class="user-name"></span>
+                        <button id="logoutBtn" class="btn btn-secondary">Sair</button>
+                    </nav>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Filters -->
+            <section class="filters">
+                <div class="container">
+                    <div class="filters-grid">
+                        <div class="filter-group">
+                            <label for="typeFilter">Tipo:</label>
+                            <select id="typeFilter" class="filter-select">
+                                <option value="">Todos</option>
+                                <option value="Assalto">Assalto</option>
+                                <option value="Acidente">Acidente</option>
+                                <option value="Vandalismo">Vandalismo</option>
+                                <option value="Incêndio">Incêndio</option>
+                                <option value="Buraco na via">Buraco na via</option>
+                                <option value="Falta de iluminação">Falta de iluminação</option>
+                                <option value="Acúmulo de lixo">Acúmulo de lixo</option>
+                                <option value="Alagamento">Alagamento</option>
+                                <option value="Outro">Outro</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label for="dateFilter">Período:</label>
+                            <select id="dateFilter" class="filter-select">
+                                <option value="">Todos</option>
+                                <option value="24h">Últimas 24h</option>
+                                <option value="7d">Últimos 7 dias</option>
+                                <option value="30d">Últimos 30 dias</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label for="radiusFilter">Raio (km):</label>
+                            <input type="number" id="radiusFilter" class="filter-input" placeholder="Ex: 5" min="1" max="50">
+                        </div>
+
+                        <button id="applyFilters" class="btn btn-primary">Aplicar Filtros</button>
+                        <button id="clearFilters" class="btn btn-secondary">Limpar</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Map and List -->
+            <section class="content">
+                <div class="container">
+                    <div class="content-grid">
+                        <!-- Map -->
+                        <div class="map-container">
+                            <div id="map" class="map"></div>
+                            <button id="createOccurrenceBtn" class="btn-float" title="Criar nova ocorrência">
+                                ➕
+                            </button>
+                        </div>
+
+                        <!-- List -->
+                        <div class="list-container">
+                            <h2 class="list-title">Ocorrências Recentes</h2>
+                            <div id="occurrencesList" class="occurrences-list">
+                                <!-- Será preenchido dinamicamente -->
+                            </div>
+                            <div id="pagination" class="pagination">
+                                <!-- Paginação -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal: Detalhes da Ocorrência -->
+    <div id="detailsModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close">&times;</span>
+            <div id="detailsContent" class="details-content">
+                <!-- Será preenchido dinamicamente -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Criar Ocorrência -->
+    <div id="createModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close">&times;</span>
+            <h2 class="modal-title">Registrar Nova Ocorrência</h2>
+            <form id="createForm" class="form">
+                <div class="form-group">
+                    <label for="occurrenceType">Tipo de Ocorrência *</label>
+                    <select id="occurrenceType" class="form-control" required>
+                        <option value="">Selecione...</option>
+                        <option value="Assalto">Assalto</option>
+                        <option value="Acidente">Acidente</option>
+                        <option value="Vandalismo">Vandalismo</option>
+                        <option value="Incêndio">Incêndio</option>
+                        <option value="Buraco na via">Buraco na via</option>
+                        <option value="Falta de iluminação">Falta de iluminação</option>
+                        <option value="Acúmulo de lixo">Acúmulo de lixo</option>
+                        <option value="Alagamento">Alagamento</option>
+                        <option value="Outro">Outro</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Descrição *</label>
+                    <textarea id="description" class="form-control" rows="4" minlength="10" maxlength="2000" required 
+                              placeholder="Descreva a ocorrência com o máximo de detalhes possível..."></textarea>
+                    <small class="form-help">Mínimo 10 caracteres</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Localização *</label>
+                    <div class="location-options">
+                        <button type="button" id="useCurrentLocation" class="btn btn-secondary btn-small">
+                            📍 Usar Minha Localização
+                        </button>
+                        <button type="button" id="selectOnMap" class="btn btn-secondary btn-small">
+                            🗺️ Selecionar no Mapa
+                        </button>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-col">
+                            <input type="number" id="latitude" class="form-control" placeholder="Latitude" step="any" required readonly>
+                        </div>
+                        <div class="form-col">
+                            <input type="number" id="longitude" class="form-control" placeholder="Longitude" step="any" required readonly>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="photo">Foto</label>
+                    <input type="file" id="photo" class="form-control" accept="image/jpeg,image/png,image/jpg">
+                    <small class="form-help">JPG ou PNG, máximo 5MB</small>
+                    <div id="photoPreview" class="photo-preview"></div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary btn-block">
+                        📝 Registrar Ocorrência
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
