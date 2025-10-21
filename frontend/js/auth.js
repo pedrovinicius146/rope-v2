@@ -1,47 +1,90 @@
-const Auth = (() => {
-    const API_URL = 'https://rope-v2-backend.up.railway.app/api/auth';
+const express = require('express');
+const router = express.Router();
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
-    const login = async (email, password) => {
-        const res = await fetch(`${API_URL}/login`, {
-            method: 'POST',
-            credentials: 'include', // ✅ necessário para CORS com cookies/sessão
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
-        });
+// ====================================
+// Registro de novo usuário
+// ====================================
+router.post('/register', async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
 
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || 'Erro no login');
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'Preencha todos os campos.' });
+    }
 
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('userName', data.name);
-        return data;
-    };
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ message: 'E-mail já cadastrado.' });
+    }
 
-    const register = async (name, email, password) => {
-        const res = await fetch(`${API_URL}/register`, {
-            method: 'POST',
-            credentials: 'include', // ✅ idem no registro
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, email, password })
-        });
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || 'Erro no registro');
+    const newUser = new User({
+      name,
+      email,
+      password: hashedPassword
+    });
 
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('userName', data.name);
-        return data;
-    };
+    await newUser.save();
 
-    const logout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('userName');
-        window.location.href = 'login.html';
-    };
+    const token = jwt.sign(
+      { id: newUser._id, email: newUser.email },
+      process.env.JWT_SECRET || 'defaultsecret',
+      { expiresIn: '7d' }
+    );
 
-    const getToken = () => localStorage.getItem('token');
-    const getUserName = () => localStorage.getItem('userName');
-    const isAuthenticated = () => !!getToken();
+    return res.status(201).json({
+      message: 'Usuário registrado com sucesso!',
+      token,
+      name: newUser.name
+    });
 
-    return { login, register, logout, getToken, getUserName, isAuthenticated };
-})();
+  } catch (error) {
+    console.error('Erro no registro:', error);
+    res.status(500).json({ message: 'Erro no servidor.' });
+  }
+});
+
+// ====================================
+// Login de usuário
+// ====================================
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Informe e-mail e senha.' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: 'Usuário não encontrado.' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Senha incorreta.' });
+    }
+
+    const token = jwt.sign(
+      { id: user._id, email: user.email },
+      process.env.JWT_SECRET || 'defaultsecret',
+      { expiresIn: '7d' }
+    );
+
+    return res.status(200).json({
+      message: 'Login realizado com sucesso!',
+      token,
+      name: user.name
+    });
+
+  } catch (error) {
+    console.error('Erro no login:', error);
+    res.status(500).json({ message: 'Erro no servidor.' });
+  }
+});
+
+module.exports = router;
