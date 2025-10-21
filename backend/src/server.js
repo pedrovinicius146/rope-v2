@@ -1,77 +1,85 @@
-// ==============================
-// 🧠 CONFIGURAÇÕES INICIAIS
-// ==============================
-require('dotenv').config();
+// ==========================================
+//  server.js – Backend ROPE V2 (definitivo)
+// ==========================================
+require('dotenv').config(); // Carrega variáveis do .env ou do Railway
+
 const express = require('express');
-const connectDB = require('./config/database');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 
+// Rotas
+const authRoutes = require('./routes/authRoutes');
+const occurrenceRoutes = require('./routes/occurrenceRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
+
+// Inicializa app
 const app = express();
 
-// Conectar ao MongoDB
-connectDB();
+// ==========================================
+//  MIDDLEWARES
+// ==========================================
+app.use(express.json());
+app.use(helmet());
 
-// ==============================
-// 🔒 CONFIGURAÇÃO DE CORS
-// ==============================
+// Limita requisições (proteção básica contra DDoS)
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 100, // 100 requisições por IP
+});
+app.use(limiter);
 
+// ==========================================
+//  CONFIGURAÇÃO DE CORS
+// ==========================================
 const allowedOrigins = [
   'http://localhost:8080',
-  'http://127.0.0.1:8080',
-  'https://rope-v2-production.up.railway.app', // ✅ seu frontend no Railway/Vercel
+  'https://rope-v2-production.up.railway.app'
 ];
 
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn('🚫 Origem bloqueada pelo CORS:', origin);
+      callback(new Error('CORS não permitido para: ' + origin));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
+}));
 
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  }
+// ==========================================
+//  CONEXÃO COM MONGODB
+// ==========================================
+const mongoUri = process.env.MONGO_URI;
+console.log('🔍 MONGO_URI lido:', mongoUri ? 'OK' : 'undefined');
 
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
+mongoose.connect(mongoUri)
+  .then(() => console.log('✅ Conectado ao MongoDB com sucesso!'))
+  .catch(err => console.error('❌ Erro ao conectar ao MongoDB:', err.message));
 
-  // ✅ Responde requisições preflight (CORS OPTIONS)
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(204);
-  }
-
-  next();
+// ==========================================
+//  ROTAS
+// ==========================================
+app.get('/', (req, res) => {
+  res.json({ message: '🚀 API ROPE rodando com sucesso!' });
 });
-
-// ==============================
-// 🧩 MIDDLEWARES
-// ==============================
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// ==============================
-// 📦 ROTAS
-// ==============================
-const authRoutes = require('./routes/auth');
-const occurrencesRoutes = require('./routes/occurrences');
 
 app.use('/api/auth', authRoutes);
-app.use('/api/occurrences', occurrencesRoutes);
+app.use('/api/occurrences', occurrenceRoutes);
+app.use('/api/uploads', uploadRoutes);
 
-// ==============================
-// 📁 SERVIR UPLOADS
-// ==============================
+// ==========================================
+//  SERVIR ARQUIVOS ESTÁTICOS (uploads)
+// ==========================================
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// ==============================
-// 🧪 ROTA DE TESTE
-// ==============================
-app.get('/', (req, res) => {
-  res.send('🟢 Backend RO-PE funcionando perfeitamente!');
-});
-
-// ==============================
-// 🚀 INICIAR SERVIDOR
-// ==============================
-//
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`);
-});
+// ==========================================
+//  INICIAR SERVIDOR
+// ==========================================
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
