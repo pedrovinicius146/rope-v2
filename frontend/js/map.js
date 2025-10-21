@@ -19,7 +19,16 @@ document.addEventListener('DOMContentLoaded', () => {
 async function fetchOccurrences(params = {}) {
     try {
         const query = new URLSearchParams(params).toString();
-        const res = await fetch(`${API_URL}?${query}`);
+
+        const res = await fetch(`${API_URL}?${query}`, {
+            method: 'GET',
+            credentials: 'include', // ✅ Permite cookies/session no CORS
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!res.ok) throw new Error(`Erro HTTP ${res.status}`);
         const data = await res.json();
         displayOccurrences(data);
     } catch (err) {
@@ -28,6 +37,7 @@ async function fetchOccurrences(params = {}) {
 }
 
 function displayOccurrences(occurrences) {
+    // Remove marcadores antigos
     markers.forEach(m => map.removeLayer(m));
     markers = [];
 
@@ -35,16 +45,19 @@ function displayOccurrences(occurrences) {
     listContainer.innerHTML = '';
 
     occurrences.forEach(occ => {
-        const marker = L.marker([occ.location.coordinates[1], occ.location.coordinates[0]])
+        const [lng, lat] = occ.location.coordinates;
+
+        const marker = L.marker([lat, lng])
             .addTo(map)
             .bindPopup(`<b>${occ.type}</b><br>${occ.description}`);
+
         markers.push(marker);
 
         const item = document.createElement('div');
         item.className = 'occurrence-item';
         item.innerHTML = `<strong>${occ.type}</strong><p>${occ.description}</p>`;
         item.addEventListener('click', () => {
-            map.setView([occ.location.coordinates[1], occ.location.coordinates[0]], 16);
+            map.setView([lat, lng], 16);
             marker.openPopup();
         });
         listContainer.appendChild(item);
@@ -56,7 +69,6 @@ function applyFilters() {
     const period = document.getElementById('dateFilter').value;
     const radius = document.getElementById('radiusFilter').value;
 
-    // Obter centro do mapa como referência
     const center = map.getCenter();
     const params = { type, period };
 
