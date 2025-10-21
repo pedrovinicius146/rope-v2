@@ -1,6 +1,5 @@
 const BACKEND_URL = 'https://rope-v2-production.up.railway.app';
 
-// Elementos do formulário
 const createForm = document.getElementById('createForm');
 const latitudeInput = document.getElementById('latitude');
 const longitudeInput = document.getElementById('longitude');
@@ -8,7 +7,6 @@ const photoInput = document.getElementById('photo');
 const photoPreview = document.getElementById('photoPreview');
 const occurrencesList = document.getElementById('occurrencesList');
 
-// Inicializa mapa
 let map = L.map('map').setView([-8.04756, -34.8769], 13);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenStreetMap contributors'
@@ -30,20 +28,17 @@ map.on('click', e => {
   }
 });
 
-// Preview de foto
-photoInput.addEventListener('change', () => {
+photoInput?.addEventListener('change', () => {
   if (photoInput.files[0]) {
     const reader = new FileReader();
     reader.onload = () => {
-      photoPreview.innerHTML = `<img src="${reader.result}" alt="Preview" style="max-width:200px;">`;
+      photoPreview.innerHTML = `<img src="${reader.result}" style="max-width:200px;">`;
     };
     reader.readAsDataURL(photoInput.files[0]);
   } else photoPreview.innerHTML = '';
 });
 
-// =============================
-// Buscar ocorrências
-// =============================
+// BUSCAR OCORRÊNCIAS
 async function fetchOccurrences(params = {}) {
   try {
     const query = new URLSearchParams(params).toString();
@@ -55,12 +50,10 @@ async function fetchOccurrences(params = {}) {
     const res = await fetch(url, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
-
     if (!res.ok) {
       const data = await res.json();
       throw new Error(data.message || 'Erro ao buscar ocorrências');
     }
-
     const data = await res.json();
     occurrencesList.innerHTML = '';
     data.forEach(occ => {
@@ -81,10 +74,8 @@ async function fetchOccurrences(params = {}) {
   }
 }
 
-// =============================
-// Criar ocorrência
-// =============================
-createForm.addEventListener('submit', async e => {
+// CRIAR OCORRÊNCIA
+createForm?.addEventListener('submit', async e => {
   e.preventDefault();
   const token = Auth.getToken();
   if (!token) return Auth.logout();
@@ -110,4 +101,34 @@ createForm.addEventListener('submit', async e => {
       body: formData
     });
 
-    const contentType = res.hea
+    const contentType = res.headers.get('content-type');
+    let data = {};
+    if (contentType && contentType.includes('application/json')) data = await res.json();
+    else {
+      const text = await res.text();
+      console.error('Resposta inesperada do servidor:', text);
+      throw new Error('Erro inesperado do servidor.');
+    }
+
+    if (!res.ok) throw new Error(data.message || 'Erro ao criar ocorrência');
+
+    alert('✅ Ocorrência registrada com sucesso!');
+    createForm.reset();
+    photoPreview.innerHTML = '';
+    if (marker) {
+      map.removeLayer(marker);
+      marker = null;
+    }
+
+    fetchOccurrences();
+  } catch (err) {
+    alert('❌ ' + err.message);
+    console.error(err);
+  }
+});
+
+// CARREGAR OCORRÊNCIAS AO INICIAR
+document.addEventListener('DOMContentLoaded', () => {
+  if (!Auth.isAuthenticated()) window.location.href = 'login.html';
+  fetchOccurrences();
+});

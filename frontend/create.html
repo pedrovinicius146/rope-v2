@@ -132,7 +132,7 @@
       if (photoInput.files[0]) formData.append('photo', photoInput.files[0]);
 
       try {
-        const res = await fetch('https://rope-v2-production.up.railway.app/api/occurences', {
+        const res = await fetch('https://rope-v2-production.up.railway.app/api/occurrences', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` },
           body: formData
