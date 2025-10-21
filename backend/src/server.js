@@ -13,16 +13,20 @@ const path = require('path');
 // Cria app
 const app = express();
 
+// ✅ Corrige erro de proxy (Railway, Render, etc.)
+app.set('trust proxy', 1);
+
 // =============================
 //  MIDDLEWARES
 // =============================
 app.use(express.json());
 app.use(helmet());
 
-// Limita requisições (segurança)
+// Limita requisições para evitar abuso
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
   max: 100,
+  message: 'Muitas requisições deste IP. Tente novamente mais tarde.'
 });
 app.use(limiter);
 
@@ -37,7 +41,6 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Permite sem origem (ex: Postman, servidor interno)
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -78,13 +81,10 @@ const occurrenceRoutes = require('./routes/occurrences'); // ocorrências
 // =============================
 //  ROTAS
 // =============================
-
-// Teste rápido
 app.get('/', (req, res) => {
   res.json({ message: '🚀 API ROPE rodando com sucesso!' });
 });
 
-// Usa as rotas principais
 app.use('/api/auth', authRoutes);
 app.use('/api/occurrences', occurrenceRoutes);
 
