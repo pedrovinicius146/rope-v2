@@ -1,7 +1,7 @@
 // =============================
 //  server.js – Backend ROPE V2
 // =============================
-require('dotenv').config(); // Carrega variáveis do .env ou do Railway
+require('dotenv').config(); // Carrega variáveis do .env ou Railway
 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -34,18 +34,20 @@ const allowedOrigins = [
   'https://rope-v2-production.up.railway.app'
 ];
 
-app.use(cors({
-  origin: function (origin, callback) {
-    // Permite sem origem (ex: ferramentas internas ou Postman)
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Origem não permitida pelo CORS: ' + origin));
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Permite sem origem (ex: Postman, servidor interno)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Origem não permitida pelo CORS: ' + origin));
+      }
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true,
+  })
+);
 
 // =============================
 //  CONEXÃO COM O BANCO DE DADOS
@@ -59,9 +61,10 @@ if (!mongoUri) {
   process.exit(1);
 }
 
-mongoose.connect(mongoUri)
+mongoose
+  .connect(mongoUri)
   .then(() => console.log('✅ Conectado ao MongoDB com sucesso!'))
-  .catch(err => {
+  .catch((err) => {
     console.error('❌ Erro ao conectar ao MongoDB:', err.message);
     process.exit(1);
   });
@@ -69,30 +72,24 @@ mongoose.connect(mongoUri)
 // =============================
 //  IMPORTAÇÃO DAS ROTAS
 // =============================
-const authRoutes = require('./routes/authRoutes');
-const occurrenceRoutes = require('./routes/occurrenceRoutes');
-const uploadRoutes = require('./routes/uploadRoutes');
+const authRoutes = require('./routes/auth'); // login e registro
+const occurrenceRoutes = require('./routes/occurrences'); // ocorrências
 
 // =============================
 //  ROTAS
 // =============================
 
-// Teste rápido (para checar se o backend está online)
+// Teste rápido
 app.get('/', (req, res) => {
   res.json({ message: '🚀 API ROPE rodando com sucesso!' });
 });
 
+// Usa as rotas principais
 app.use('/api/auth', authRoutes);
 app.use('/api/occurrences', occurrenceRoutes);
-;
 
-// =============================
-//  SERVIR FRONTEND (caso queira usar o mesmo domínio)
-// =============================
-// app.use(express.static(path.join(__dirname, '../frontend')));
-// app.get('*', (req, res) => {
-//   res.sendFile(path.join(__dirname, '../frontend/index.html'));
-// });
+// Servir uploads de imagens
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // =============================
 //  INICIA O SERVIDOR
