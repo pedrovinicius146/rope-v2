@@ -8,6 +8,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 
 // Cria app
 const app = express();
@@ -51,24 +52,48 @@ app.use(cors({
 // =============================
 const mongoUri = process.env.MONGO_URI;
 
-// Log para debug (não mostra a URI completa)
 console.log('🔍 MONGO_URI lido:', mongoUri ? 'OK' : 'undefined');
+
+if (!mongoUri) {
+  console.error('❌ ERRO: MONGO_URI não está definido nas variáveis de ambiente.');
+  process.exit(1);
+}
 
 mongoose.connect(mongoUri)
   .then(() => console.log('✅ Conectado ao MongoDB com sucesso!'))
-  .catch(err => console.error('❌ Erro ao conectar ao MongoDB:', err.message));
+  .catch(err => {
+    console.error('❌ Erro ao conectar ao MongoDB:', err.message);
+    process.exit(1);
+  });
+
+// =============================
+//  IMPORTAÇÃO DAS ROTAS
+// =============================
+const authRoutes = require('./routes/authRoutes');
+const occurrenceRoutes = require('./routes/occurrenceRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
 
 // =============================
 //  ROTAS
 // =============================
-// Exemplo de rota de teste
+
+// Teste rápido (para checar se o backend está online)
 app.get('/', (req, res) => {
   res.json({ message: '🚀 API ROPE rodando com sucesso!' });
 });
 
 app.use('/api/auth', authRoutes);
 app.use('/api/occurrences', occurrenceRoutes);
-app.use('/api/uploads', uploadRoutes);
+;
+
+// =============================
+//  SERVIR FRONTEND (caso queira usar o mesmo domínio)
+// =============================
+// app.use(express.static(path.join(__dirname, '../frontend')));
+// app.get('*', (req, res) => {
+//   res.sendFile(path.join(__dirname, '../frontend/index.html'));
+// });
+
 // =============================
 //  INICIA O SERVIDOR
 // =============================
