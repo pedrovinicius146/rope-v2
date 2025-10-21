@@ -66,11 +66,9 @@ app.get('/', (req, res) => {
   res.json({ message: '🚀 API ROPE rodando com sucesso!' });
 });
 
-// Aqui você importa e usa suas rotas reais
-// ex:
-// const authRoutes = require('./routes/authRoutes');
-// app.use('/api/auth', authRoutes);
-
+app.use('/api/auth', authRoutes);
+app.use('/api/occurrences', occurrenceRoutes);
+app.use('/api/uploads', uploadRoutes);
 // =============================
 //  INICIA O SERVIDOR
 // =============================
