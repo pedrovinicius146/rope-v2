@@ -1,7 +1,7 @@
 // =============================
-//  server.js – Backend ROPE V2
+//  server.js – Backend + Frontend (Railway)
 // =============================
-require('dotenv').config(); // Carrega variáveis do .env ou Railway
+require('dotenv').config();
 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -10,10 +10,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 
-// Cria app
 const app = express();
-
-// ✅ Corrige erro de proxy (Railway, Render, etc.)
 app.set('trust proxy', 1);
 
 // =============================
@@ -31,12 +28,12 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // =============================
-//  CONFIGURAÇÃO DE CORS
+//  CORS
 // =============================
 const allowedOrigins = [
   'http://localhost:8080',
-  'https://rope-v2-production.up.railway.app',
-  'https://teste-ten-olive.vercel.app'
+  'http://127.0.0.1:8080',
+  'https://rope-v2-production.up.railway.app'
 ];
 
 app.use(
@@ -45,7 +42,7 @@ app.use(
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(new Error('Origem não permitida pelo CORS: ' + origin));
+        callback(new Error('Origem não permitida: ' + origin));
       }
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -54,54 +51,46 @@ app.use(
 );
 
 // =============================
-//  CONEXÃO COM O BANCO DE DADOS
+//  CONEXÃO COM MONGODB
 // =============================
 const mongoUri = process.env.MONGO_URI;
-
 console.log('🔍 MONGO_URI lido:', mongoUri ? 'OK' : 'undefined');
 
 if (!mongoUri) {
-  console.error('❌ ERRO: MONGO_URI não está definido nas variáveis de ambiente.');
+  console.error('❌ ERRO: MONGO_URI não está definido!');
   process.exit(1);
 }
 
 mongoose
   .connect(mongoUri)
-  .then(() => console.log('✅ Conectado ao MongoDB com sucesso!'))
+  .then(() => console.log('✅ Conectado ao MongoDB!'))
   .catch((err) => {
     console.error('❌ Erro ao conectar ao MongoDB:', err.message);
     process.exit(1);
   });
 
 // =============================
-//  IMPORTAÇÃO DAS ROTAS
+//  ROTAS DA API
 // =============================
-const authRoutes = require('./routes/auth'); // login e registro
-const occurrenceRoutes = require('./routes/occurrences'); // ocorrências
-
-// =============================
-//  ROTAS
-// =============================
-app.get('/', (req, res) => {
-  res.json({ message: '🚀 API ROPE rodando com sucesso!' });
-});
+const authRoutes = require('./routes/auth');
+const occurrenceRoutes = require('./routes/occurrences');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/occurrences', occurrenceRoutes);
 
-// Servir uploads de imagens
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-
 // =============================
-//  INICIA O SERVIDOR
+//  SERVIR FRONTEND (build ou arquivos estáticos)
 // =============================
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
-
-const frontendPath = path.join(__dirname, '../frontend');
+const frontendPath = path.join(__dirname, '../../frontend'); // sobe 2 níveis se estiver em backend/src/
 app.use(express.static(frontendPath));
 
-// Qualquer rota que não seja API → entrega o index.html
+// Rota de fallback — entrega index.html para rotas SPA
 app.get('*', (req, res) => {
   res.sendFile(path.join(frontendPath, 'index.html'));
 });
+
+// =============================
+//  INICIAR SERVIDOR
+// =============================
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
