@@ -1,0 +1,12 @@
+{
+  "name": "rope-frontend",
+  "version": "1.0.0",
+  "description": "Frontend do RO-PE",
+  "main": "index.html",
+  "scripts": {
+    "start": "http-server ./ -c-1 -o -a localhost -p 8080"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}

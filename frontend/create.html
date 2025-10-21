@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registrar Ocorrência - RO-PE</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    #map { height: 300px; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📝 Registrar Ocorrência</h1>
+      <button id="logoutBtn" class="btn btn-secondary">Sair</button>
+    </header>
+
+    <form id="createForm" class="form">
+      <!-- Tipo -->
+      <div class="form-group">
+        <label for="occurrenceType">Tipo de Ocorrência *</label>
+        <select id="occurrenceType" required>
+          <option value="">Selecione...</option>
+          <option value="Assalto">Assalto</option>
+          <option value="Acidente">Acidente</option>
+          <option value="Vandalismo">Vandalismo</option>
+          <option value="Incêndio">Incêndio</option>
+          <option value="Buraco na via">Buraco na via</option>
+          <option value="Falta de iluminação">Falta de iluminação</option>
+          <option value="Acúmulo de lixo">Acúmulo de lixo</option>
+          <option value="Alagamento">Alagamento</option>
+          <option value="Outro">Outro</option>
+        </select>
+      </div>
+
+      <!-- Descrição -->
+      <div class="form-group">
+        <label for="description">Descrição *</label>
+        <textarea id="description" rows="4" required placeholder="Descreva a ocorrência..."></textarea>
+      </div>
+
+      <!-- Mapa -->
+      <div class="form-group">
+        <label>Localização *</label>
+        <div id="map"></div>
+        <input type="number" id="latitude" placeholder="Latitude" step="any" required readonly>
+        <input type="number" id="longitude" placeholder="Longitude" step="any" required readonly>
+      </div>
+
+      <!-- Foto -->
+      <div class="form-group">
+        <label for="photo">Foto (opcional)</label>
+        <input type="file" id="photo" accept="image/jpeg,image/png,image/jpg">
+        <div id="photoPreview"></div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block">Registrar Ocorrência</button>
+    </form>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    // Logout
+    document.getElementById('logoutBtn').addEventListener('click', () => Auth.logout());
+
+    // Redireciona se não estiver logado
+    if (!Auth.isAuthenticated()) {
+      window.location.href = 'login.html';
+    }
+
+    const createForm = document.getElementById('createForm');
+    const latitudeInput = document.getElementById('latitude');
+    const longitudeInput = document.getElementById('longitude');
+    const photoInput = document.getElementById('photo');
+    const photoPreview = document.getElementById('photoPreview');
+
+    // Inicializa mapa
+    const map = L.map('map').setView([-8.04756, -34.8769], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Marcador inicial
+    let marker = null;
+
+    // Clique no mapa para selecionar localização
+    map.on('click', e => {
+      const { lat, lng } = e.latlng;
+      latitudeInput.value = lat.toFixed(6);
+      longitudeInput.value = lng.toFixed(6);
+
+      if (marker) {
+        marker.setLatLng([lat, lng]);
+      } else {
+        marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+        // Atualiza input ao arrastar
+        marker.on('dragend', e => {
+          const pos = e.target.getLatLng();
+          latitudeInput.value = pos.lat.toFixed(6);
+          longitudeInput.value = pos.lng.toFixed(6);
+        });
+      }
+    });
+
+    // Pré-visualizar foto
+    photoInput.addEventListener('change', () => {
+      if (photoInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          photoPreview.innerHTML = `<img src="${reader.result}" alt="Preview" style="max-width: 200px;">`;
+        };
+        reader.readAsDataURL(photoInput.files[0]);
+      } else {
+        photoPreview.innerHTML = '';
+      }
+    });
+
+    // Enviar formulário
+    createForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      const token = Auth.getToken();
+      if (!token) return Auth.logout();
+
+      const formData = new FormData();
+      formData.append('type', document.getElementById('occurrenceType').value);
+      formData.append('description', document.getElementById('description').value);
+      formData.append('lat', latitudeInput.value);
+      formData.append('lng', longitudeInput.value);
+      if (photoInput.files[0]) formData.append('photo', photoInput.files[0]);
+
+      try {
+        const res = await fetch('http://localhost:3000/api/occurrences', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Erro ao criar ocorrência');
+        alert('Ocorrência registrada com sucesso!');
+        createForm.reset();
+        photoPreview.innerHTML = '';
+        if (marker) map.removeLayer(marker);
+      } catch (err) {
+        alert(err.message);
+        console.error(err);
+      }
+    });
+  </script>
+</body>
+</html>
