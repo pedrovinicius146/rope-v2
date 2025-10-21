@@ -17,7 +17,11 @@ app.set('trust proxy', 1);
 //  MIDDLEWARES
 // =============================
 app.use(express.json());
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: false
+  })
+);
 
 // Limita requisições para evitar abuso
 const limiter = rateLimit({
