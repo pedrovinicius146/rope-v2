@@ -96,3 +96,11 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // =============================
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
+const frontendPath = path.join(__dirname, '../frontend');
+app.use(express.static(frontendPath));
+
+// Qualquer rota que não seja API → entrega o index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(frontendPath, 'index.html'));
+});
