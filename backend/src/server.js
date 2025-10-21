@@ -6,10 +6,14 @@ const path = require('path');
 
 const app = express();
 
+// ==========================
 // Conectar ao MongoDB
+// ==========================
 connectDB();
 
+// ==========================
 // Configuração de CORS
+// ==========================
 const allowedOrigins = [
   'http://localhost:8080',
   'http://127.0.0.1:8080',
@@ -18,22 +22,33 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function(origin, callback) {
-    // Permite requisições sem origin (ex: Postman)
+    // Permite ferramentas como Postman sem origin
     if (!origin) return callback(null, true);
-
-    if (allowedOrigins.indexOf(origin) === -1) {
-      return callback(new Error('Acesso bloqueado por CORS'), false);
-    }
+    if (allowedOrigins.indexOf(origin) === -1) return callback(new Error('Acesso bloqueado por CORS'), false);
     return callback(null, true);
   },
-  credentials: true, // Permite envio de cookies
+  credentials: true,
+  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Permite receber JSON e dados de formulários
+// Responder a todas requisições OPTIONS
+app.options('*', cors({
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// ==========================
+// Middlewares para parsing
+// ==========================
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// ==========================
 // Rotas
+// ==========================
 const authRoutes = require('./routes/auth');
 const occurrencesRoutes = require('./routes/occurrences');
 
@@ -48,7 +63,9 @@ app.get('/', (req, res) => {
 // Servir uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// ==========================
 // Start do servidor
+// ==========================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
