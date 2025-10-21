@@ -1,5 +1,5 @@
 // =============================
-//  server.js – Backend + Frontend
+//  server.js – Backend + Frontend (Railway)
 // =============================
 require('dotenv').config();
 
@@ -11,7 +11,7 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 
 const app = express();
-app.set('trust proxy', 1); // Corrige proxy em Railway, Render etc.
+app.set('trust proxy', 1);
 
 // =============================
 //  MIDDLEWARES
@@ -19,7 +19,7 @@ app.set('trust proxy', 1); // Corrige proxy em Railway, Render etc.
 app.use(express.json());
 app.use(
   helmet({
-    contentSecurityPolicy: false, // Desativa CSP para evitar bloqueio de scripts inline
+    contentSecurityPolicy: false
   })
 );
 
@@ -27,7 +27,7 @@ app.use(
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
   max: 100,
-  message: 'Muitas requisições deste IP. Tente novamente mais tarde.',
+  message: 'Muitas requisições deste IP. Tente novamente mais tarde.'
 });
 app.use(limiter);
 
@@ -37,7 +37,7 @@ app.use(limiter);
 const allowedOrigins = [
   'http://localhost:8080',
   'http://127.0.0.1:8080',
-  'https://rope-v2-production.up.railway.app',
+  'https://rope-v2-production.up.railway.app'
 ];
 
 app.use(
@@ -83,13 +83,13 @@ app.use('/api/auth', authRoutes);
 app.use('/api/occurrences', occurrenceRoutes);
 
 // =============================
-//  SERVIR FRONTEND
+//  SERVIR FRONTEND (build ou arquivos estáticos)
 // =============================
-const frontendPath = path.join(__dirname, '../frontend'); // src/server.js -> ../frontend
+const frontendPath = path.join(__dirname, '../../frontend'); // sobe 2 níveis se estiver em backend/src/
 app.use(express.static(frontendPath));
 
-// Fallback para SPA (não interfere nas rotas da API)
-app.get(/^\/(?!api).*/, (req, res) => {
+// Rota de fallback — entrega index.html para rotas SPA
+app.get('*', (req, res) => {
   res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
