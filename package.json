@@ -6,6 +6,6 @@
     "install-all": "cd backend && npm install && cd ../frontend && npm install",
     "start": "concurrently \"npm:backend\" \"npm:frontend\"",
     "backend": "cd backend && node src/server.js",
-    "frontend": "cd frontend && npx http-server ./ -c-1 -o"
+    "frontend": "cd frontend && npx http-server ./ -c-1 -o -p 8081"
   }
 }
