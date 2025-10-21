@@ -6,10 +6,14 @@
   <title>RO-PE - Registros e Ocorrências Pernambuco</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="css/styles.css">
+  <style>
+    #map { height: 400px; width: 100%; margin-bottom: 1rem; }
+    .occurrence-item { padding: 0.5rem; border-bottom: 1px solid #ccc; cursor: pointer; }
+    .occurrence-item:hover { background-color: #f0f0f0; }
+  </style>
 </head>
 <body>
 <div id="app">
-  <!-- Header -->
   <header class="header">
     <div class="container">
       <div class="header-content">
@@ -22,7 +26,6 @@
     </div>
   </header>
 
-  <!-- Main Content -->
   <main class="main">
     <!-- Filters -->
     <section class="filters">
@@ -69,17 +72,14 @@
     <section class="content">
       <div class="container">
         <div class="content-grid">
-          <!-- Map -->
           <div class="map-container">
             <div id="map" class="map"></div>
             <button id="createOccurrenceBtn" class="btn-float" title="Criar nova ocorrência">➕</button>
           </div>
 
-          <!-- List -->
           <div class="list-container">
             <h2 class="list-title">Ocorrências Recentes</h2>
             <div id="occurrencesList" class="occurrences-list"></div>
-            <div id="pagination" class="pagination"></div>
           </div>
         </div>
       </div>
@@ -90,13 +90,13 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="js/auth.js"></script>
 <script>
-  // Config
-  const API_URL = 'http://localhost:3000/api/occurrences';
+  const API_URL = 'https://rope-v2-production.up.railway.app/api/occurrences';
   let map, markers = [];
 
   document.addEventListener('DOMContentLoaded', () => {
     // Redirecionar se não logado
     if (!Auth.isAuthenticated()) window.location.href = 'login.html';
+
     document.getElementById('logoutBtn').addEventListener('click', () => Auth.logout());
 
     // Inicializa mapa
@@ -119,11 +119,17 @@
 
   async function fetchOccurrences(filters = {}) {
     try {
+      const token = Auth.getToken();
+      if (!token) return Auth.logout();
+
       let query = '';
       if (filters.type) query += `type=${filters.type}&`;
       if (filters.period) query += `period=${filters.period}&`;
       if (filters.radius) query += `radius=${filters.radius}&`;
-      const res = await fetch(`${API_URL}?${query}`);
+
+      const res = await fetch(`${API_URL}?${query}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const data = await res.json();
       displayOccurrences(data);
     } catch (err) {
@@ -132,6 +138,7 @@
   }
 
   function displayOccurrences(occurrences) {
+    // Remove marcadores antigos
     markers.forEach(m => map.removeLayer(m));
     markers = [];
 
@@ -142,13 +149,17 @@
       const lat = occ.location.coordinates[1];
       const lng = occ.location.coordinates[0];
 
-      // Mapa
-      const marker = L.marker([lat, lng])
-        .addTo(map)
-        .bindPopup(`<b>${occ.type}</b><br>${occ.description}`);
+      // Adiciona marcador no mapa
+      const marker = L.marker([lat, lng]).addTo(map);
+      const popupContent = `
+        <b>${occ.type}</b><br>
+        ${occ.description}<br>
+        ${occ.photoUrl ? `<img src="https://rope-v2-production.up.railway.app${occ.photoUrl}" style="max-width:150px;">` : ''}
+      `;
+      marker.bindPopup(popupContent);
       markers.push(marker);
 
-      // Lista
+      // Adiciona item na lista
       const item = document.createElement('div');
       item.className = 'occurrence-item';
       item.innerHTML = `<strong>${occ.type}</strong><p>${occ.description}</p>`;
