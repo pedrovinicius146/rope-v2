@@ -9,33 +9,38 @@ const photoPreview = document.getElementById('photoPreview');
 const occurrencesList = document.getElementById('occurrencesList');
 
 // Inicializa mapa
-let map = L.map('map').setView([-8.04756, -34.8769], 13);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; OpenStreetMap contributors'
-}).addTo(map);
-
+let map = null;
 let marker = null;
-map.on('click', e => {
-  const { lat, lng } = e.latlng;
-  latitudeInput.value = lat.toFixed(6);
-  longitudeInput.value = lng.toFixed(6);
-  if (marker) marker.setLatLng([lat, lng]);
-  else {
-    marker = L.marker([lat, lng], { draggable: true }).addTo(map);
-    marker.on('dragend', e => {
-      const pos = e.target.getLatLng();
-      latitudeInput.value = pos.lat.toFixed(6);
-      longitudeInput.value = pos.lng.toFixed(6);
-    });
-  }
-});
+const mapContainer = document.getElementById('map');
+if (mapContainer) {
+  map = L.map('map').setView([-8.04756, -34.8769], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  map.on('click', e => {
+    const { lat, lng } = e.latlng;
+    latitudeInput.value = lat.toFixed(6);
+    longitudeInput.value = lng.toFixed(6);
+
+    if (marker) marker.setLatLng([lat, lng]);
+    else {
+      marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+      marker.on('dragend', e => {
+        const pos = e.target.getLatLng();
+        latitudeInput.value = pos.lat.toFixed(6);
+        longitudeInput.value = pos.lng.toFixed(6);
+      });
+    }
+  });
+}
 
 // Preview de foto
-photoInput.addEventListener('change', () => {
+photoInput?.addEventListener('change', () => {
   if (photoInput.files[0]) {
     const reader = new FileReader();
     reader.onload = () => {
-      photoPreview.innerHTML = `<img src="${reader.result}" alt="Preview" style="max-width:200px;">`;
+      photoPreview.innerHTML = `<img src="${reader.result}" style="max-width:200px;">`;
     };
     reader.readAsDataURL(photoInput.files[0]);
   } else photoPreview.innerHTML = '';
@@ -55,7 +60,6 @@ async function fetchOccurrences(params = {}) {
     const res = await fetch(url, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
-
     if (!res.ok) {
       const data = await res.json();
       throw new Error(data.message || 'Erro ao buscar ocorrências');
@@ -84,7 +88,7 @@ async function fetchOccurrences(params = {}) {
 // =============================
 // Criar ocorrência
 // =============================
-createForm.addEventListener('submit', async e => {
+createForm?.addEventListener('submit', async e => {
   e.preventDefault();
   const token = Auth.getToken();
   if (!token) return Auth.logout();
@@ -124,9 +128,13 @@ createForm.addEventListener('submit', async e => {
     alert('✅ Ocorrência registrada com sucesso!');
     createForm.reset();
     photoPreview.innerHTML = '';
-    if (marker) { map.removeLayer(marker); marker = null; }
+    if (marker && map) {
+      map.removeLayer(marker);
+      marker = null;
+    }
 
     fetchOccurrences();
+
   } catch (err) {
     alert('❌ ' + err.message);
     console.error(err);
