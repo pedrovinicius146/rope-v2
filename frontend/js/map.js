@@ -1,6 +1,6 @@
 let map;
 let markers = [];
-const API_URL = 'https://rope-v2-backend.up.railway.app/api/occurrences';
+const API_URL = 'https://rope-v2-production.up.railway.app/api/occurrences';
 
 document.addEventListener('DOMContentLoaded', () => {
     map = L.map('map').setView([-8.04756, -34.8769], 13);
