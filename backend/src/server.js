@@ -11,7 +11,8 @@ connectDB();
 // Middlewares
 const allowedOrigins = [
   'http://localhost:8080',
-  'http://127.0.0.1:8080'
+  'http://127.0.0.1:8080',
+     'https://rope-v2-production.up.railway.app',
 ];
 
 app.use(cors({
