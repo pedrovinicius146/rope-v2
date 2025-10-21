@@ -94,7 +94,6 @@
   let map, markers = [];
 
   document.addEventListener('DOMContentLoaded', () => {
-    // Redirecionar se não logado
     if (!Auth.isAuthenticated()) window.location.href = 'login.html';
 
     document.getElementById('logoutBtn').addEventListener('click', () => Auth.logout());
@@ -107,12 +106,10 @@
 
     fetchOccurrences();
 
-    // Botão criar ocorrência
     document.getElementById('createOccurrenceBtn').addEventListener('click', () => {
       window.location.href = 'create.html';
     });
 
-    // Filtros
     document.getElementById('applyFilters').addEventListener('click', applyFilters);
     document.getElementById('clearFilters').addEventListener('click', clearFilters);
   });
@@ -138,7 +135,6 @@
   }
 
   function displayOccurrences(occurrences) {
-    // Remove marcadores antigos
     markers.forEach(m => map.removeLayer(m));
     markers = [];
 
@@ -149,17 +145,32 @@
       const lat = occ.location.coordinates[1];
       const lng = occ.location.coordinates[0];
 
-      // Adiciona marcador no mapa
       const marker = L.marker([lat, lng]).addTo(map);
-      const popupContent = `
-        <b>${occ.type}</b><br>
-        ${occ.description}<br>
-        ${occ.photoUrl ? `<img src="https://rope-v2-production.up.railway.app${occ.photoUrl}" style="max-width:150px;">` : ''}
-      `;
+
+      // Inicializa popup sem imagem
+      let popupContent = `<b>${occ.type}</b><br>${occ.description}<br>`;
+      const imgId = `popup-img-${occ._id}`;
+
+      if (occ.photoUrl) {
+        popupContent += `<img id="${imgId}" style="max-width:150px; display:none;">`;
+      }
+
       marker.bindPopup(popupContent);
+
+      // Carrega imagem apenas quando abrir o popup
+      marker.on('popupopen', () => {
+        if (occ.photoUrl) {
+          const img = document.getElementById(imgId);
+          if (img && !img.src) {
+            img.src = `https://rope-v2-production.up.railway.app/${occ.photoUrl}`;
+            img.style.display = 'block';
+            img.onerror = () => { img.style.display = 'none'; };
+          }
+        }
+      });
+
       markers.push(marker);
 
-      // Adiciona item na lista
       const item = document.createElement('div');
       item.className = 'occurrence-item';
       item.innerHTML = `<strong>${occ.type}</strong><p>${occ.description}</p>`;
