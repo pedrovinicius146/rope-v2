@@ -35,7 +35,8 @@ app.use(limiter);
 // =============================
 const allowedOrigins = [
   'http://localhost:8080',
-  'https://rope-v2-production.up.railway.app'
+  'https://rope-v2-production.up.railway.app',
+  'https://teste-ten-olive.vercel.app'
 ];
 
 app.use(
