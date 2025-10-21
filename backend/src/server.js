@@ -1,73 +1,75 @@
+// ==============================
+// 🧠 CONFIGURAÇÕES INICIAIS
+// ==============================
 require('dotenv').config();
 const express = require('express');
 const connectDB = require('./config/database');
-const cors = require('cors');
+const path = require('path');
 
 const app = express();
 
-// ========================================
-// 1️⃣ Conectar ao MongoDB
-// ========================================
+// Conectar ao MongoDB
 connectDB();
 
-// ========================================
-// 2️⃣ Configuração de CORS
-// ========================================
+// ==============================
+// 🔒 CONFIGURAÇÃO DE CORS
+// ==============================
+
 const allowedOrigins = [
   'http://localhost:8080',
   'http://127.0.0.1:8080',
-  'https://rope-v2-production.up.railway.app', // seu frontend
+  'https://rope-v2-production.up.railway.app', // ✅ seu frontend no Railway/Vercel
 ];
 
 app.use((req, res, next) => {
   const origin = req.headers.origin;
+
   if (allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Origin', origin);
   }
 
-  // Permitir cabeçalhos e métodos necessários
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
 
-  // ⚠️ Importante: responder imediatamente ao preflight
+  // ✅ Responde requisições preflight (CORS OPTIONS)
   if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
+    return res.sendStatus(204);
   }
 
   next();
 });
 
-// ========================================
-// 3️⃣ Middlewares globais
-// ========================================
+// ==============================
+// 🧩 MIDDLEWARES
+// ==============================
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ========================================
-// 4️⃣ Rotas
-// ========================================
+// ==============================
+// 📦 ROTAS
+// ==============================
 const authRoutes = require('./routes/auth');
 const occurrencesRoutes = require('./routes/occurrences');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/occurrences', occurrencesRoutes);
 
-// ========================================
-// 5️⃣ Rota teste
-// ========================================
+// ==============================
+// 📁 SERVIR UPLOADS
+// ==============================
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// ==============================
+// 🧪 ROTA DE TESTE
+// ==============================
 app.get('/', (req, res) => {
-  res.send('🟢 Backend RO-PE funcionando!');
+  res.send('🟢 Backend RO-PE funcionando perfeitamente!');
 });
 
-// ========================================
-// 6️⃣ Servir uploads
-// ========================================
-app.use('/uploads', express.static('uploads'));
-
-// ========================================
-// 7️⃣ Start servidor
-// ========================================
+// ==============================
+// 🚀 INICIAR SERVIDOR
+// ==============================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
