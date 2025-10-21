@@ -1,5 +1,5 @@
 const Auth = (() => {
-    const API_URL = 'http://localhost:3000/api/auth';
+    const API_URL = 'https://rope-v2-backend.up.railway.app/api/auth';
 
     const login = async (email, password) => {
         const res = await fetch(`${API_URL}/login`, {

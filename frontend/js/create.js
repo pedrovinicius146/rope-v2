@@ -84,7 +84,7 @@ createForm?.addEventListener('submit', async (e) => {
     if (photoInput.files[0]) formData.append('photo', photoInput.files[0]);
 
     try {
-        const res = await fetch('http://localhost:3000/api/occurrences', {
+        const res = await fetch('https://rope-v2-backend.up.railway.app/api/occurrences', {
             method: 'POST',
             body: formData
         });
