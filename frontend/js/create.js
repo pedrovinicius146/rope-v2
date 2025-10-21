@@ -1,14 +1,19 @@
+// =============================
+// CREATE.JS – RO-PE
+// =============================
+
 // Elementos do formulário
 const createForm = document.getElementById('createForm');
 const useCurrentLocation = document.getElementById('useCurrentLocation');
-const selectOnMap = document.getElementById('selectOnMap');
 const latitudeInput = document.getElementById('latitude');
 const longitudeInput = document.getElementById('longitude');
 const photoInput = document.getElementById('photo');
 const photoPreview = document.getElementById('photoPreview');
+const occurrencesList = document.getElementById('occurrencesList'); // div para listar ocorrências
 
-// Inicializa mapa para seleção manual (opcional)
-let map, marker;
+// Inicializa mapa (Leaflet)
+let map = null;
+let marker = null;
 const mapContainer = document.getElementById('map');
 if (mapContainer) {
     map = L.map('map').setView([-8.04756, -34.8769], 13);
@@ -55,7 +60,7 @@ photoInput?.addEventListener('change', () => {
     if (photoInput.files[0]) {
         const reader = new FileReader();
         reader.onload = () => {
-            photoPreview.innerHTML = `<img src="${reader.result}" alt="Preview" style="max-width: 200px;">`;
+            photoPreview.innerHTML = `<img src="${reader.result}" alt="Preview" style="max-width:200px;">`;
         };
         reader.readAsDataURL(photoInput.files[0]);
     } else {
@@ -63,9 +68,58 @@ photoInput?.addEventListener('change', () => {
     }
 });
 
-// Envio do formulário
-createForm?.addEventListener('submit', async (e) => {
+// =============================
+// FUNÇÃO PARA BUSCAR OCORRÊNCIAS
+// =============================
+async function fetchOccurrences(params = {}) {
+    try {
+        const query = new URLSearchParams(params).toString();
+        const url = query 
+            ? `https://rope-v2-production.up.railway.app/api/occurrences?${query}`
+            : `https://rope-v2-production.up.railway.app/api/occurrences`;
+
+        const token = Auth.getToken();
+        if (!token) return Auth.logout();
+
+        const res = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.message || 'Erro ao buscar ocorrências');
+        }
+
+        const data = await res.json();
+
+        // Limpa lista antes de renderizar
+        if (occurrencesList) occurrencesList.innerHTML = '';
+
+        data.forEach(occ => {
+            const item = document.createElement('div');
+            item.classList.add('occurrence-item');
+            item.innerHTML = `
+                <h3>${occ.type}</h3>
+                <p>${occ.description}</p>
+                <p>Local: ${occ.location.coordinates[1].toFixed(6)}, ${occ.location.coordinates[0].toFixed(6)}</p>
+                ${occ.photoUrl ? `<img src="https://rope-v2-production.up.railway.app${occ.photoUrl}" style="max-width:200px;">` : ''}
+                <hr>
+            `;
+            occurrencesList.appendChild(item);
+        });
+
+    } catch (err) {
+        console.error(err);
+        alert('❌ ' + err.message);
+    }
+}
+
+// =============================
+// ENVIO DO FORMULÁRIO
+// =============================
+createForm?.addEventListener('submit', async e => {
     e.preventDefault();
+    const token = Auth.getToken();
+    if (!token) return Auth.logout();
 
     const type = document.getElementById('occurrenceType')?.value;
     const description = document.getElementById('description')?.value;
@@ -84,12 +138,12 @@ createForm?.addEventListener('submit', async (e) => {
     if (photoInput.files[0]) formData.append('photo', photoInput.files[0]);
 
     try {
-        const res = await fetch('https://rope-v2-production.up.railway.app/api/occurences', {
+        const res = await fetch('https://rope-v2-production.up.railway.app/api/occurrences', {
             method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
             body: formData
         });
 
-        // Verifica se resposta é JSON
         const contentType = res.headers.get('content-type');
         let data = {};
         if (contentType && contentType.includes('application/json')) {
@@ -104,20 +158,25 @@ createForm?.addEventListener('submit', async (e) => {
 
         alert('✅ Ocorrência registrada com sucesso!');
         createForm.reset();
-        latitudeInput.value = '';
-        longitudeInput.value = '';
         photoPreview.innerHTML = '';
-
-        // Remove marcador do mapa
         if (marker && map) {
             map.removeLayer(marker);
             marker = null;
         }
 
-        // Atualiza lista/marcadores se função estiver disponível
-        if (typeof fetchOccurrences === 'function') fetchOccurrences();
+        // Atualiza lista de ocorrências
+        fetchOccurrences();
+
     } catch (err) {
         alert('❌ ' + err.message);
         console.error(err);
     }
+});
+
+// =============================
+// CARREGAR OCORRÊNCIAS AO INICIAR
+// =============================
+document.addEventListener('DOMContentLoaded', () => {
+    if (!Auth.isAuthenticated()) window.location.href = 'login.html';
+    fetchOccurrences();
 });
