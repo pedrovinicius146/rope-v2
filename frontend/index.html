@@ -10,15 +10,6 @@
     #map { height: 400px; width: 100%; margin-bottom: 1rem; }
     .occurrence-item { padding: 0.5rem; border-bottom: 1px solid #ccc; cursor: pointer; }
     .occurrence-item:hover { background-color: #f0f0f0; }
-
-    /* Garantir que imagens dentro do popup não quebrem */
-    .leaflet-popup-content img {
-        display: block;
-        max-width: 150px;
-        max-height: 150px;
-        width: auto;
-        height: auto;
-    }
   </style>
 </head>
 <body>
@@ -99,104 +90,114 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="js/auth.js"></script>
 <script>
-  const API_URL = 'https://rope-v2-production.up.railway.app/api/occurrences';
-  let map, markers = [];
+const API_URL = 'https://rope-v2-production.up.railway.app/api/occurrences';
+let map, markers = [];
 
-  document.addEventListener('DOMContentLoaded', () => {
-    if (!Auth.isAuthenticated()) window.location.href = 'login.html';
+document.addEventListener('DOMContentLoaded', () => {
+  if (!Auth.isAuthenticated()) window.location.href = 'login.html';
+  document.getElementById('logoutBtn').addEventListener('click', () => Auth.logout());
 
-    document.getElementById('logoutBtn').addEventListener('click', () => Auth.logout());
+  // Inicializa mapa
+  map = L.map('map').setView([-8.04756, -34.8769], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
 
-    map = L.map('map').setView([-8.04756, -34.8769], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
+  fetchOccurrences();
 
-    fetchOccurrences();
-
-    document.getElementById('createOccurrenceBtn').addEventListener('click', () => {
-      window.location.href = 'create.html';
-    });
-
-    document.getElementById('applyFilters').addEventListener('click', applyFilters);
-    document.getElementById('clearFilters').addEventListener('click', clearFilters);
+  document.getElementById('createOccurrenceBtn').addEventListener('click', () => {
+    window.location.href = 'create.html';
   });
 
-  async function fetchOccurrences(filters = {}) {
-    try {
-      const token = Auth.getToken();
-      if (!token) return Auth.logout();
+  document.getElementById('applyFilters').addEventListener('click', applyFilters);
+  document.getElementById('clearFilters').addEventListener('click', clearFilters);
+});
 
-      let query = '';
-      if (filters.type) query += `type=${filters.type}&`;
-      if (filters.period) query += `period=${filters.period}&`;
-      if (filters.radius) query += `radius=${filters.radius}&`;
+// Buscar ocorrências
+async function fetchOccurrences(filters = {}) {
+  try {
+    const token = Auth.getToken();
+    if (!token) return Auth.logout();
 
-      const res = await fetch(`${API_URL}?${query}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+    // Se houver filtro de raio, pega localização atual
+    if (filters.radius) {
+      await new Promise((resolve) => {
+        navigator.geolocation.getCurrentPosition(pos => {
+          filters.lat = pos.coords.latitude;
+          filters.lng = pos.coords.longitude;
+          resolve();
+        }, () => resolve()); // continua sem lat/lng se falhar
       });
-      const data = await res.json();
-      displayOccurrences(data);
-    } catch (err) {
-      console.error('Erro ao carregar ocorrências:', err);
     }
-  }
 
-  function displayOccurrences(occurrences) {
-    markers.forEach(m => map.removeLayer(m));
-    markers = [];
+    // Monta query string
+    const params = new URLSearchParams();
+    if (filters.type) params.append('type', filters.type);
+    if (filters.period) params.append('period', filters.period);
+    if (filters.radius && filters.lat && filters.lng) {
+      params.append('radius', filters.radius);
+      params.append('lat', filters.lat);
+      params.append('lng', filters.lng);
+    }
 
-    const listContainer = document.getElementById('occurrencesList');
-    listContainer.innerHTML = '';
-
-    occurrences.forEach(occ => {
-      if (!occ.location || !occ.location.coordinates || occ.location.coordinates.length < 2) {
-        console.warn('Ocorrência sem coordenadas:', occ);
-        return;
-      }
-
-      const lat = occ.location.coordinates[1];
-      const lng = occ.location.coordinates[0];
-
-      const marker = L.marker([lat, lng]).addTo(map);
-      let popupContent = `<b>${occ.type}</b><br>${occ.description}<br>`;
-      marker.bindPopup(popupContent);
-
-      marker.on('popupopen', () => {
-        if (occ.photoUrl) {
-          const imgUrl = occ.photoUrl.startsWith('/') ? occ.photoUrl : '/' + occ.photoUrl;
-          const fullContent = `<b>${occ.type}</b><br>${occ.description}<br>
-            <img src="https://rope-v2-production.up.railway.app${imgUrl}" style="max-width:150px;" onerror="this.style.display='none';">`;
-          marker.getPopup().setContent(fullContent);
-        }
-      });
-
-      markers.push(marker);
-
-      const item = document.createElement('div');
-      item.className = 'occurrence-item';
-      item.innerHTML = `<strong>${occ.type}</strong><p>${occ.description}</p>`;
-      item.addEventListener('click', () => {
-        map.setView([lat, lng], 16);
-        marker.openPopup();
-      });
-      listContainer.appendChild(item);
+    const res = await fetch(`${API_URL}?${params.toString()}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
     });
+    const data = await res.json();
+    displayOccurrences(data);
+  } catch (err) {
+    console.error('Erro ao carregar ocorrências:', err);
   }
+}
 
-  function applyFilters() {
-    const type = document.getElementById('typeFilter').value;
-    const period = document.getElementById('dateFilter').value;
-    const radius = document.getElementById('radiusFilter').value;
-    fetchOccurrences({ type, period, radius });
-  }
+// Exibir no mapa e lista
+function displayOccurrences(occurrences) {
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
 
-  function clearFilters() {
-    document.getElementById('typeFilter').value = '';
-    document.getElementById('dateFilter').value = '';
-    document.getElementById('radiusFilter').value = '';
-    fetchOccurrences();
-  }
+  const listContainer = document.getElementById('occurrencesList');
+  listContainer.innerHTML = '';
+
+  occurrences.forEach(occ => {
+    if (!occ.location || !occ.location.coordinates) return;
+
+    const lat = occ.location.coordinates[1];
+    const lng = occ.location.coordinates[0];
+
+    const marker = L.marker([lat, lng]).addTo(map);
+    const popupContent = `
+      <b>${occ.type}</b><br>
+      ${occ.description}<br>
+      ${occ.photoUrl ? `<img src="https://rope-v2-production.up.railway.app${occ.photoUrl}" style="max-width:150px;">` : ''}
+    `;
+    marker.bindPopup(popupContent);
+    markers.push(marker);
+
+    const item = document.createElement('div');
+    item.className = 'occurrence-item';
+    item.innerHTML = `<strong>${occ.type}</strong><p>${occ.description}</p>`;
+    item.addEventListener('click', () => {
+      map.setView([lat, lng], 16);
+      marker.openPopup();
+    });
+    listContainer.appendChild(item);
+  });
+}
+
+// Filtros
+function applyFilters() {
+  const type = document.getElementById('typeFilter').value;
+  const period = document.getElementById('dateFilter').value;
+  const radius = document.getElementById('radiusFilter').value;
+  fetchOccurrences({ type, period, radius });
+}
+
+function clearFilters() {
+  document.getElementById('typeFilter').value = '';
+  document.getElementById('dateFilter').value = '';
+  document.getElementById('radiusFilter').value = '';
+  fetchOccurrences();
+}
 </script>
 </body>
 </html>

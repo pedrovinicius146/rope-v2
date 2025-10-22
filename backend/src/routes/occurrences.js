@@ -15,10 +15,35 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// Listar ocorrências
+// =======================
+// LISTAR OCORRÊNCIAS COM FILTROS
+// =======================
 router.get('/', async (req, res) => {
   try {
-    const occurrences = await Occurrence.find().sort({ createdAt: -1 });
+    const { type, period, radius, lat, lng } = req.query;
+    let filter = {};
+
+    // Tipo
+    if (type) filter.type = type;
+
+    // Período
+    if (period) {
+      const now = new Date();
+      let startDate;
+      if (period === '24h') startDate = new Date(now - 24*60*60*1000);
+      if (period === '7d') startDate = new Date(now - 7*24*60*60*1000);
+      if (period === '30d') startDate = new Date(now - 30*24*60*60*1000);
+      if (startDate) filter.createdAt = { $gte: startDate };
+    }
+
+    // Raio
+    if (radius && lat && lng) {
+      filter.location = {
+        $geoWithin: { $centerSphere: [[parseFloat(lng), parseFloat(lat)], parseFloat(radius)/6378.1] }
+      };
+    }
+
+    const occurrences = await Occurrence.find(filter).sort({ createdAt: -1 });
     res.json(occurrences);
   } catch (err) {
     console.error(err);
@@ -26,7 +51,9 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Criar ocorrência
+// =======================
+// CRIAR OCORRÊNCIA
+// =======================
 router.post('/', upload.single('photo'), async (req, res) => {
   try {
     const { type, description, lat, lng } = req.body;
