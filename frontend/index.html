@@ -10,6 +10,15 @@
     #map { height: 400px; width: 100%; margin-bottom: 1rem; }
     .occurrence-item { padding: 0.5rem; border-bottom: 1px solid #ccc; cursor: pointer; }
     .occurrence-item:hover { background-color: #f0f0f0; }
+
+    /* Garantir que imagens dentro do popup não quebrem */
+    .leaflet-popup-content img {
+        display: block;
+        max-width: 150px;
+        max-height: 150px;
+        width: auto;
+        height: auto;
+    }
   </style>
 </head>
 <body>
@@ -141,24 +150,23 @@
     listContainer.innerHTML = '';
 
     occurrences.forEach(occ => {
-      // Verifica se as coordenadas existem
       if (!occ.location || !occ.location.coordinates || occ.location.coordinates.length < 2) {
         console.warn('Ocorrência sem coordenadas:', occ);
-        return; // pula esta ocorrência
+        return;
       }
 
       const lat = occ.location.coordinates[1];
       const lng = occ.location.coordinates[0];
 
       const marker = L.marker([lat, lng]).addTo(map);
-
       let popupContent = `<b>${occ.type}</b><br>${occ.description}<br>`;
       marker.bindPopup(popupContent);
 
       marker.on('popupopen', () => {
         if (occ.photoUrl) {
+          const imgUrl = occ.photoUrl.startsWith('/') ? occ.photoUrl : '/' + occ.photoUrl;
           const fullContent = `<b>${occ.type}</b><br>${occ.description}<br>
-            <img src="https://rope-v2-production.up.railway.app/${occ.photoUrl}" style="max-width:150px;" onerror="this.style.display='none';">`;
+            <img src="https://rope-v2-production.up.railway.app${imgUrl}" style="max-width:150px;" onerror="this.style.display='none';">`;
           marker.getPopup().setContent(fullContent);
         }
       });
