@@ -147,25 +147,16 @@
 
       const marker = L.marker([lat, lng]).addTo(map);
 
-      // Inicializa popup sem imagem
+      // Conteúdo inicial do popup (sem imagem)
       let popupContent = `<b>${occ.type}</b><br>${occ.description}<br>`;
-      const imgId = `popup-img-${occ._id}`;
-
-      if (occ.photoUrl) {
-        popupContent += `<img id="${imgId}" style="max-width:150px; display:none;">`;
-      }
-
       marker.bindPopup(popupContent);
 
-      // Carrega imagem apenas quando abrir o popup
+      // Carregar imagem apenas quando abrir o popup
       marker.on('popupopen', () => {
         if (occ.photoUrl) {
-          const img = document.getElementById(imgId);
-          if (img && !img.src) {
-            img.src = `https://rope-v2-production.up.railway.app/${occ.photoUrl}`;
-            img.style.display = 'block';
-            img.onerror = () => { img.style.display = 'none'; };
-          }
+          const fullContent = `<b>${occ.type}</b><br>${occ.description}<br>
+            <img src="https://rope-v2-production.up.railway.app/${occ.photoUrl}" style="max-width:150px;" onerror="this.style.display='none';">`;
+          marker.getPopup().setContent(fullContent);
         }
       });
 
