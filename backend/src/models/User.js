@@ -7,7 +7,7 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
 }, { timestamps: true });
 
-// Hash da senha antes de salvar
+
 
 
 // Comparar senha
